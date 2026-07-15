@@ -181,13 +181,3 @@ The hand-written stub types are **not** shipped in this package — real
 more complete than my stubs once `npm install` actually runs against the
 registry, so `npm run typecheck` is worth re-running as the first step
 with real infra.
-
-## Scaling beyond this exercise
-
-- Horizontal scaling: API and worker processes are stateless — scale
-  by adding instances behind a load balancer / increasing worker
-  concurrency, matched to observed Postgres write throughput.
-- Read replicas for any reporting/analytics off `payment_transactions`
-  so those queries never compete with the write path.
-- Metrics on queue depth (BullMQ) and `UNAPPLIED`/`FAILED` counts, since
-  those are the signals that something needs human reconciliation.
