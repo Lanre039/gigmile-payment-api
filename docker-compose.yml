@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: payments
+      # Force md5 standard so PgBouncer can read the hash easily locally
+      POSTGRES_INITDB_ARGS: "--auth-host=md5 --auth-local=md5"
+    ports:
+      - "15432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    networks:
+      - payment_net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - payment_net
+
+  # Optional: connection pooler recommended in front of Postgres at
+  # 100k notifications/minute so short-lived API/worker transactions
+  # don't exhaust Postgres's own max_connections.
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: payments
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 2000
+      DEFAULT_POOL_SIZE: 50
+    ports:
+      - "6432:5432"
+    depends_on:
+      - postgres
+    networks:
+      - payment_net
+
+volumes:
+  pgdata:
+
+networks:
+  payment_net:
+    driver: bridge
